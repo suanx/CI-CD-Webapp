@@ -1,0 +1,98 @@
+Deploying a Web Application using Jenkins and Tomcat
+1. Installing Jenkins on Server 1
+Install Jenkins, Git, and Java 17 on Server 1 using the following script:
+
+bash
+sudo yum update -y
+sudo yum install -y java-17
+sudo yum install -y git
+sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+sudo yum install -y jenkins
+sudo systemctl enable jenkins
+sudo systemctl start jenkins
+Store all project files in a Git repository.
+
+In Jenkins:
+
+Select the Freestyle Project.
+
+Install the required Jenkins plugin: Deploy to Container.
+
+Configure Git settings to connect to your repository.
+
+2. Installing Tomcat on Server 2
+Install Tomcat on Server 2 using these steps:
+
+bash
+wget https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.39/bin/apache-tomcat-10.1.39.tar.gz
+tar -zvxf apache-tomcat-10.1.39.tar.gz
+cd apache-tomcat-10.1.39/bin
+./startup.sh
+(Optional) If needed, change the default Tomcat port from 8080 to 8090:
+
+bash
+cd apache-tomcat-10.1.39/conf
+vi server.xml
+Locate <Connector port="8080" ...> and change it to <Connector port="8090" ...>.
+
+Restart Tomcat to apply the changes:
+
+bash
+./shutdown.sh
+./startup.sh
+3. Configuring Tomcat Manager for Deployment
+Host Manager & Manager Authorization Fix:
+By default, the Tomcat Manager is accessible only from localhost. To allow Jenkins access:
+
+Edit the context.xml files for the Manager and Host Manager applications:
+
+bash
+vi apache-tomcat-10.1.39/webapps/manager/META-INF/context.xml
+vi apache-tomcat-10.1.39/webapps/host-manager/META-INF/context.xml
+Comment out the following line:
+
+xml
+<!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"
+     allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" /> -->
+Updating Tomcat User Credentials:
+To allow Jenkins to deploy applications, update conf/tomcat-users.xml:
+
+Open the file:
+
+bash
+vi apache-tomcat-10.1.39/conf/tomcat-users.xml
+Add the following user with necessary roles:
+
+xml
+<role rolename="admin-gui"/>
+<role rolename="admin-script"/>
+<role rolename="manager-gui"/>
+<role rolename="manager-script"/>
+<user username="admin" password="adminpassword" roles="admin-gui,admin-script,manager-gui,manager-script"/>
+Save the file and restart Tomcat:
+
+bash
+./shutdown.sh
+./startup.sh
+4. Deploying the Web Application via Jenkins
+Configure Jenkins to deploy the .war file to Tomcat:
+
+Use the Deploy to Container plugin.
+
+Set the Tomcat Manager URL, e.g., http://<Server-2-IP>:8080/manager/text.
+
+Provide the credentials configured in tomcat-users.xml (username: admin, password: adminpassword).
+
+After a successful build, access the deployed application at:
+
+text
+http://<Server-2-IP>:8080/<your-project-name>
+(Replace <Server-2-IP> and <your-project-name> with actual values.)
+
+Tips & Precautions
+Use strong credentials to secure access to Tomcat Manager.
+
+Avoid commenting out the Valve lines in context.xml for production environments unless necessary.
+
+Ensure firewall and network settings allow Jenkins to communicate with Tomcat on Server 2.
